@@ -158,13 +158,13 @@ for epoch in range(0, epoch_num):
         #print("[epoch: %3d/%3d, batch: %5d/%5d, ite: %d] train loss: %3f, tar: %3f " % (
         #epoch + 1, epoch_num, (i + 1) * batch_size_train, train_num, ite_num, running_loss / ite_num4val, running_tar_loss / ite_num4val))
 
-        if ite_num % save_frq == 0:
+        # if ite_num % save_frq == 0:
 
-            torch.save(net.state_dict(), model_dir + model_name+"_bce_itr_%d_train_%3f_tar_%3f.pth" % (ite_num, running_loss / ite_num4val, running_tar_loss / ite_num4val))
-            running_loss = 0.0
-            running_tar_loss = 0.0
-            net.train()  # resume train
-            ite_num4val = 0
+        #     torch.save(net.state_dict(), model_dir + model_name+"_bce_itr_%d_train_%3f_tar_%3f.pth" % (ite_num, running_loss / ite_num4val, running_tar_loss / ite_num4val))
+        #     running_loss = 0.0
+        #     running_tar_loss = 0.0
+        #     net.train()  # resume train
+        #     ite_num4val = 0
 
     end_time = time.time()  # ⏱️ End timing
     elapsed_time = end_time - start_time
@@ -177,4 +177,10 @@ for epoch in range(0, epoch_num):
     running_loss = 0.0
     running_tar_loss = 0.0
     ite_num4val = 0
+
+# Save final model after all epochs
+final_model_path = os.path.join(model_dir, model_name + "_final.pth")
+torch.save(net.state_dict(), final_model_path)
+print(f"Final model saved to {final_model_path}")
+
 
