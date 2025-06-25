@@ -25,6 +25,8 @@ from model import U2NET
 from model import U2NETP
 
 import time
+import matplotlib.pyplot as plt
+import csv
 
 # ------- 1. define loss function --------
 
@@ -118,6 +120,9 @@ running_tar_loss = 0.0
 ite_num4val = 0
 save_frq = 20 # save the model every 20 iterations
 
+epoch_losses = []
+epoch_target_losses = []
+
 for epoch in range(0, epoch_num):
     start_time = time.time()
     net.train()
@@ -173,6 +178,9 @@ for epoch in range(0, epoch_num):
     avg_tar_loss = running_tar_loss / ite_num4val
     print(f"[Epoch {epoch + 1}/{epoch_num}] Average loss: {avg_loss:.6f}, Target loss: {avg_tar_loss:.6f}, Time Taken: {elapsed_time:.2f}s")
 
+    epoch_losses.append(avg_loss)
+    epoch_target_losses.append(avg_tar_loss)
+
     # Reset epoch accumulators
     running_loss = 0.0
     running_tar_loss = 0.0
@@ -183,4 +191,19 @@ final_model_path = os.path.join(model_dir, model_name + "_final.pth")
 torch.save(net.state_dict(), final_model_path)
 print(f"Final model saved to {final_model_path}")
 
+with open(os.path.join(model_dir, 'loss_log.csv'), 'w', newline='') as f:
+    writer = csv.writer(f)
+    writer.writerow(['Epoch', 'Average Loss', 'Target Loss'])
+    for i in range(len(epoch_losses)):
+        writer.writerow([i+1, epoch_losses[i], epoch_target_losses[i]])
 
+print(f"Losses saved to {os.path.join(model_dir, 'loss_log.csv')}")
+
+plt.plot(epoch_losses, label='Total Loss')
+plt.plot(epoch_target_losses, label='Target Loss (d0)')
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.legend()
+plt.title('Training Loss Over Epochs')
+plt.savefig(os.path.join(model_dir, 'loss_plot.png'))
+plt.show()
