@@ -24,6 +24,7 @@ from data_loader import SalObjDataset
 from model import U2NET
 from model import U2NETP
 
+import time
 
 # ------- 1. define loss function --------
 
