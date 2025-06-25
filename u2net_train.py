@@ -62,7 +62,7 @@ label_ext = '.png'
 model_dir = os.path.join(os.getcwd(), 'saved_models', model_name + os.sep)
 os.makedirs(model_dir, exist_ok=True)
 
-epoch_num = 20
+epoch_num = 50
 batch_size_train = 12
 batch_size_val = 1
 train_num = 0
