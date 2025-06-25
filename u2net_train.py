@@ -24,7 +24,6 @@ from data_loader import SalObjDataset
 from model import U2NET
 from model import U2NETP
 
-os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 # ------- 1. define loss function --------
 
@@ -41,7 +40,7 @@ def muti_bce_loss_fusion(d0, d1, d2, d3, d4, d5, d6, labels_v):
 	loss6 = bce_loss(d6,labels_v)
 
 	loss = loss0 + loss1 + loss2 + loss3 + loss4 + loss5 + loss6
-	print("l0: %3f, l1: %3f, l2: %3f, l3: %3f, l4: %3f, l5: %3f, l6: %3f\n"%(loss0.data.item(),loss1.data.item(),loss2.data.item(),loss3.data.item(),loss4.data.item(),loss5.data.item(),loss6.data.item()))
+	# print("l0: %3f, l1: %3f, l2: %3f, l3: %3f, l4: %3f, l5: %3f, l6: %3f\n"%(loss0.data.item(),loss1.data.item(),loss2.data.item(),loss3.data.item(),loss4.data.item(),loss5.data.item(),loss6.data.item()))
 
 	return loss0, loss
 
@@ -51,17 +50,16 @@ def muti_bce_loss_fusion(d0, d1, d2, d3, d4, d5, d6, labels_v):
 model_name = 'u2net' #'u2netp'
 
 data_dir = os.path.join(os.getcwd(), 'train_data' + os.sep)
-# tra_image_dir = os.path.join('DUTS', 'DUTS-TR', 'DUTS-TR', 'im_aug' + os.sep)
-# tra_label_dir = os.path.join('DUTS', 'DUTS-TR', 'DUTS-TR', 'gt_aug' + os.sep)
-tra_image_dir = os.path.join('ECSSD'+ os.sep)
-tra_label_dir = os.path.join('ECSSD_groundTruth' + os.sep)
+tra_image_dir = os.path.join('DUTS-TR', 'DUTS-TR', 'DUTS-TR-Image' + os.sep)
+tra_label_dir = os.path.join('DUTS-TR', 'DUTS-TR', 'DUTS-TR-Mask' + os.sep)
 
 image_ext = '.jpg'
 label_ext = '.png'
 
 model_dir = os.path.join(os.getcwd(), 'saved_models', model_name + os.sep)
+os.makedirs(model_dir, exist_ok=True)
 
-epoch_num = 10000
+epoch_num = 100
 batch_size_train = 12
 batch_size_val = 1
 train_num = 0
@@ -117,9 +115,10 @@ ite_num = 0
 running_loss = 0.0
 running_tar_loss = 0.0
 ite_num4val = 0
-save_frq = 2000 # save the model every 2000 iterations
+save_frq = 20 # save the model every 20 iterations
 
 for epoch in range(0, epoch_num):
+    start_time = time.time()
     net.train()
 
     for i, data in enumerate(salobj_dataloader):
@@ -155,8 +154,8 @@ for epoch in range(0, epoch_num):
         # del temporary outputs and loss
         del d0, d1, d2, d3, d4, d5, d6, loss2, loss
 
-        print("[epoch: %3d/%3d, batch: %5d/%5d, ite: %d] train loss: %3f, tar: %3f " % (
-        epoch + 1, epoch_num, (i + 1) * batch_size_train, train_num, ite_num, running_loss / ite_num4val, running_tar_loss / ite_num4val))
+        #print("[epoch: %3d/%3d, batch: %5d/%5d, ite: %d] train loss: %3f, tar: %3f " % (
+        #epoch + 1, epoch_num, (i + 1) * batch_size_train, train_num, ite_num, running_loss / ite_num4val, running_tar_loss / ite_num4val))
 
         if ite_num % save_frq == 0:
 
@@ -165,4 +164,16 @@ for epoch in range(0, epoch_num):
             running_tar_loss = 0.0
             net.train()  # resume train
             ite_num4val = 0
+
+    end_time = time.time()  # ⏱️ End timing
+    elapsed_time = end_time - start_time
+
+    avg_loss = running_loss / ite_num4val
+    avg_tar_loss = running_tar_loss / ite_num4val
+    print(f"[Epoch {epoch + 1}/{epoch_num}] Average loss: {avg_loss:.6f}, Target loss: {avg_tar_loss:.6f}, Time Taken: {elapsed_time:.2f}s")
+
+    # Reset epoch accumulators
+    running_loss = 0.0
+    running_tar_loss = 0.0
+    ite_num4val = 0
 
