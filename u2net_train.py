@@ -97,7 +97,7 @@ for img_path in val_img_name_list:
 	for i in range(1,len(bbb)):
 		imidx = imidx + "." + bbb[i]
 
-	tra_lbl_name_list.append(val_data_dir + val_label_dir + imidx + label_ext)
+	val_lbl_name_list.append(val_data_dir + val_label_dir + imidx + label_ext)
 
 
 print("---")
