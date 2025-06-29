@@ -62,7 +62,7 @@ def main():
     prediction_dir = os.path.join(os.getcwd(), 'Images' + os.sep)
     model_dir = os.path.join(os.getcwd(), 'saved_models', model_name, model_name + '_final.pth')
 
-    img_name_list = glob.glob(image_dir + os.sep + '*')
+    img_name_list = glob.glob(image_dir + os.sep + '*.jpg')
     print(img_name_list)
 
     # --------- 2. dataloader ---------
