@@ -63,8 +63,9 @@ def main():
     model_dir = os.path.join(os.getcwd(), 'saved_models', model_name, model_name + '_final.pth')
     
     img_name_list = glob.glob(image_dir + os.sep + '*.jpg')
-    print(img_name_list)
-
+    print('Test image: ', len(img_name_list))   
+    
+    
     # --------- 2. dataloader ---------
     #1. dataloader
     test_salobj_dataset = SalObjDataset(img_name_list = img_name_list,
