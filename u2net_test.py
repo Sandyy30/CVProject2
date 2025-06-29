@@ -49,7 +49,8 @@ def save_output(image_name,pred,d_dir):
     for i in range(1,len(bbb)):
         imidx = imidx + "." + bbb[i]
 
-    imo.save(d_dir+imidx+'.png')
+    save_path = os.path.join(d_dir, imidx + '.png')
+    imo.save(save_path)
 
 def main():
 
