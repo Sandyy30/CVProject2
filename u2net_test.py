@@ -58,12 +58,9 @@ def main():
 
 
 
-    image_dir = os.path.join(os.getcwd(), 'test500')
+    image_dir = os.path.join(os.getcwd(), 'test500' + 'Images')
     prediction_dir = os.path.join(os.getcwd(), 'test_result')
     model_dir = os.path.join(os.getcwd(), 'saved_models', model_name, model_name + '_final.pth')
-
-    if not os.path.exists(prediction_dir):
-        os.makedirs(prediction_dir, exist_ok=True)
     
     img_name_list = glob.glob(image_dir + os.sep + '*.jpg')
     print(img_name_list)
