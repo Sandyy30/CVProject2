@@ -117,6 +117,10 @@ def main():
         save_output(img_name_list[i_test],pred,prediction_dir)
 
         del d1,d2,d3,d4,d5,d6,d7
+    print("Saved files:")
+    for file in os.listdir(prediction_dir):
+        print(file)
+
 
 if __name__ == "__main__":
     main()
