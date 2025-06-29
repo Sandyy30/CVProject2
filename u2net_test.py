@@ -58,7 +58,7 @@ def main():
 
 
 
-    image_dir = os.path.join(os.getcwd(), 'test500' + 'Images')
+    image_dir = os.path.join(os.getcwd(), 'test500' + 'Images' + os.sep)
     prediction_dir = os.path.join(os.getcwd(), 'test_result')
     model_dir = os.path.join(os.getcwd(), 'saved_models', model_name, model_name + '_final.pth')
     
