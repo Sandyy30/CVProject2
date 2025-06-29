@@ -62,7 +62,7 @@ def main():
     prediction_dir = os.path.join(os.getcwd(), 'test_result')
     model_dir = os.path.join(os.getcwd(), 'saved_models', model_name, model_name + '_final.pth')
     
-    img_name_list = glob.glob(image_dir, 'Images', '*.*')
+    img_name_list = glob.glob(os.path.join(image_dir, 'Images', '*.*'))
     print('Test image: ', len(img_name_list))   
     
     
