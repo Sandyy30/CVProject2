@@ -49,7 +49,8 @@ def save_output(image_name,pred,d_dir):
     for i in range(1,len(bbb)):
         imidx = imidx + "." + bbb[i]
 
-    imo.save(d_dir+imidx+'.png')
+    save_path = os.path.join(d_dir, imidx + '.png')
+    imo.save(save_path)
 
 def main():
 
@@ -58,13 +59,14 @@ def main():
 
 
 
-    image_dir = os.path.join(os.getcwd(), 'test_data', 'test_images')
-    prediction_dir = os.path.join(os.getcwd(), 'test_data', model_name + '_results' + os.sep)
-    model_dir = os.path.join(os.getcwd(), 'saved_models', model_name, model_name + '.pth')
-
-    img_name_list = glob.glob(image_dir + os.sep + '*')
-    print(img_name_list)
-
+    image_dir = os.path.join(os.getcwd(), 'test500')
+    prediction_dir = os.path.join(os.getcwd(), 'test_result')
+    model_dir = os.path.join(os.getcwd(), 'saved_models', model_name, model_name + '_final.pth')
+    
+    img_name_list = glob.glob(os.path.join(image_dir, 'Images', '*.*'))
+    print('Test image: ', len(img_name_list))   
+    
+    
     # --------- 2. dataloader ---------
     #1. dataloader
     test_salobj_dataset = SalObjDataset(img_name_list = img_name_list,
@@ -117,6 +119,10 @@ def main():
         save_output(img_name_list[i_test],pred,prediction_dir)
 
         del d1,d2,d3,d4,d5,d6,d7
+    print("Saved files:")
+    for file in os.listdir(prediction_dir):
+        print(file)
+
 
 if __name__ == "__main__":
     main()
