@@ -2,99 +2,27 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class BasicConv(nn.Module):
-    def __init__(
-        self,
-        in_planes,
-        out_planes,
-        kernel_size,
-        stride=1,
-        padding=0,
-        dilation=1,
-        groups=1,
-        relu=True,
-        bn=True,
-        bias=False,
-    ):
-        super(BasicConv, self).__init__()
-        self.out_channels = out_planes
-        self.conv = nn.Conv2d(
-            in_planes,
-            out_planes,
-            kernel_size=kernel_size,
-            stride=stride,
-            padding=padding,
-            dilation=dilation,
-            groups=groups,
-            bias=bias,
-        )
-        self.bn = (
-            nn.BatchNorm2d(out_planes, eps=1e-5, momentum=0.01, affine=True)
-            if bn
-            else None
-        )
-        self.relu = nn.ReLU() if relu else None
-
-    def forward(self, x):
-        x = self.conv(x)
-        if self.bn is not None:
-            x = self.bn(x)
-        if self.relu is not None:
-            x = self.relu(x)
-        return x
-
-
-class ChannelPool(nn.Module):
-    def forward(self, x):
-        return torch.cat(
-            (torch.max(x, 1)[0].unsqueeze(1), torch.mean(x, 1).unsqueeze(1)), dim=1
-        )
-
-
-class SpatialGate(nn.Module):
+class Sobel(nn.Module):
     def __init__(self):
-        super(SpatialGate, self).__init__()
-        kernel_size = 7
-        self.compress = ChannelPool()
-        self.spatial = BasicConv(
-            2, 1, kernel_size, stride=1, padding=(kernel_size - 1) // 2, relu=False
-        )
+        super().__init__()
+        self.filter = nn.Conv2d(in_channels=1, out_channels=2, kernel_size=3, stride=1, padding=1, bias=False)
 
-    def forward(self, x):
-        x_compress = self.compress(x)
-        x_out = self.spatial(x_compress)
-        scale = torch.sigmoid_(x_out)
-        return x * scale
+        Gx = torch.tensor([[1.0, 0.0, -1.0], 
+                           [2.0, 0.0, -2.0], 
+                           [1.0, 0.0, -1.0]])
+        Gy = torch.tensor([[1.0, 2.0, 1.0], 
+                           [0.0, 0.0, 0.0], 
+                           [-1.0, -2.0, -1.0]])
+        G = torch.cat([Gx.unsqueeze(0), Gy.unsqueeze(0)], 0)
+        G = G.unsqueeze(1)
+        self.filter.weight = nn.Parameter(G, requires_grad=False)
 
-
-class TripletAttention(nn.Module):
-    def __init__(
-        self,
-        gate_channels,
-        reduction_ratio=16,
-        pool_types=["avg", "max"],
-        no_spatial=False,
-    ):
-        super(TripletAttention, self).__init__()
-        self.ChannelGateH = SpatialGate()
-        self.ChannelGateW = SpatialGate()
-        self.no_spatial = no_spatial
-        if not no_spatial:
-            self.SpatialGate = SpatialGate()
-
-    def forward(self, x):
-        x_perm1 = x.permute(0, 2, 1, 3).contiguous()
-        x_out1 = self.ChannelGateH(x_perm1)
-        x_out11 = x_out1.permute(0, 2, 1, 3).contiguous()
-        x_perm2 = x.permute(0, 3, 2, 1).contiguous()
-        x_out2 = self.ChannelGateW(x_perm2)
-        x_out21 = x_out2.permute(0, 3, 2, 1).contiguous()
-        if not self.no_spatial:
-            x_out = self.SpatialGate(x)
-            x_out = (1 / 3) * (x_out + x_out11 + x_out21)
-        else:
-            x_out = (1 / 2) * (x_out11 + x_out21)
-        return x_out
+    def forward(self, img):
+        x = self.filter(img)
+        x = torch.mul(x, x)
+        x = torch.sum(x, dim=1, keepdim=True)
+        x = torch.sqrt(x)
+        return x
 
 class REBNCONV(nn.Module):
     def __init__(self,in_ch=3,out_ch=3,dirate=1):
@@ -414,7 +342,9 @@ class U2NETE(nn.Module):
     def __init__(self,in_ch=3,out_ch=1):
         super(U2NETE,self).__init__()
 
-        self.stage1 = RSU7(in_ch,32,64)
+        self.sobel = Sobel()
+
+        self.stage1 = RSU7(4,32,64)
         self.pool12 = nn.MaxPool2d(2,stride=2,ceil_mode=True)
 
         self.stage2 = RSU6(64,32,128)
@@ -430,9 +360,6 @@ class U2NETE(nn.Module):
         self.pool56 = nn.MaxPool2d(2,stride=2,ceil_mode=True)
 
         self.stage6 = RSU4F(512,256,512)
-
-        self.triplet_attn_3 = TripletAttention(256)
-        self.triplet_attn_4 = TripletAttention(512)
 
         # decoder
         self.stage5d = RSU4F(1024,256,512)
@@ -454,8 +381,17 @@ class U2NETE(nn.Module):
 
         hx = x
 
+        # Convert RGB to grayscale
+        gray = 0.2989 * hx[:, 0:1, :, :] + 0.5870 * hx[:, 1:2, :, :] + 0.1140 * hx[:, 2:3, :, :]
+
+        # Get edge map
+        edge = self.sobel(gray)  # [B, 1, H, W]
+
+        # Concatenate RGB + edge
+        hxe = torch.cat([x, edge], dim=1)  # [B, 4, H, W]
+
         #stage 1
-        hx1 = self.stage1(hx)
+        hx1 = self.stage1(hxe)
         hx = self.pool12(hx1)
 
         #stage 2
@@ -464,12 +400,10 @@ class U2NETE(nn.Module):
 
         #stage 3
         hx3 = self.stage3(hx)
-        hx3 = self.triplet_attn_3(hx3)
         hx = self.pool34(hx3)
 
         #stage 4
         hx4 = self.stage4(hx)
-        hx4 = self.triplet_attn_4(hx4)
         hx = self.pool45(hx4)
 
         #stage 5
@@ -494,6 +428,7 @@ class U2NETE(nn.Module):
         hx2dup = _upsample_like(hx2d,hx1)
 
         hx1d = self.stage1d(torch.cat((hx2dup,hx1),1))
+
 
         #side output
         d1 = self.side1(hx1d)
