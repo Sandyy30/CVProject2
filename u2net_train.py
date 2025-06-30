@@ -23,6 +23,7 @@ from data_loader import SalObjDataset
 
 from model import U2NET
 from model import U2NETP
+from model import U2NETE
 
 import time
 import matplotlib.pyplot as plt
@@ -50,7 +51,7 @@ def muti_bce_loss_fusion(d0, d1, d2, d3, d4, d5, d6, labels_v):
 
 # ------- 2. set the directory of training dataset --------
 
-model_name = 'u2net' #'u2netp'
+model_name = 'u2nete' # ‘u2net' 'u2netp'
 
 tra_data_dir = os.path.join(os.getcwd(), 'train1000' + os.sep)
 tra_image_dir = os.path.join('Images' + os.sep)
@@ -132,9 +133,11 @@ val_dataloader = DataLoader(val_dataset, batch_size=batch_size_train, shuffle=Fa
 # ------- 3. define model --------
 # define the net
 if(model_name=='u2net'):
-    net = U2NET(3, 1)
+    net = U2NET(3,1)
 elif(model_name=='u2netp'):
     net = U2NETP(3,1)
+elif(model_name=="u2nete"):
+    net = U2NETE(3,1)
 
 if torch.cuda.is_available():
     net.cuda()
