@@ -20,6 +20,7 @@ from data_loader import SalObjDataset
 
 from model import U2NET # full size version 173.6 MB
 from model import U2NETP # small version u2net 4.7 MB
+from model import U2NETE
 
 # normalize the predicted SOD probability map
 def normPRED(d):
@@ -55,7 +56,7 @@ def save_output(image_name,pred,d_dir):
 def main():
 
     # --------- 1. get image path and name ---------
-    model_name='u2net'#u2netp
+    model_name='u2nete' # u2net u2netp
 
 
 
@@ -86,6 +87,9 @@ def main():
     elif(model_name=='u2netp'):
         print("...load U2NEP---4.7 MB")
         net = U2NETP(3,1)
+    elif(model_name=='u2nete'):
+        print("...load U2NETE...")
+        net = U2NETE(3,1)
 
     if torch.cuda.is_available():
         net.load_state_dict(torch.load(model_dir))
