@@ -438,11 +438,11 @@ class U2NETE(nn.Module):
         self.stage2d = RSU6(256,32,64)
         self.stage1d = RSU7(128,16,64)
 
-        self.triplet_attn_5 = TripletAttention()
-        self.triplet_attn_4 = TripletAttention()
-        self.triplet_attn_3 = TripletAttention()
-        self.triplet_attn_2 = TripletAttention()
-        self.triplet_attn_1 = TripletAttention()
+        self.triplet_attn_5 = TripletAttention(1024)
+        self.triplet_attn_4 = TripletAttention(1024)
+        self.triplet_attn_3 = TripletAttention(512)
+        self.triplet_attn_2 = TripletAttention(256)
+        self.triplet_attn_1 = TripletAttention(128)
 
         self.side1 = nn.Conv2d(64,out_ch,3,padding=1)
         self.side2 = nn.Conv2d(64,out_ch,3,padding=1)
