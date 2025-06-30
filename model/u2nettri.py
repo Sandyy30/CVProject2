@@ -431,18 +431,15 @@ class U2NETE(nn.Module):
 
         self.stage6 = RSU4F(512,256,512)
 
+        self.triplet_attn_3 = TripletAttention(256)
+        self.triplet_attn_4 = TripletAttention(512)
+
         # decoder
         self.stage5d = RSU4F(1024,256,512)
         self.stage4d = RSU4(1024,128,256)
         self.stage3d = RSU5(512,64,128)
         self.stage2d = RSU6(256,32,64)
         self.stage1d = RSU7(128,16,64)
-
-        self.triplet_attn_5 = TripletAttention(1024)
-        self.triplet_attn_4 = TripletAttention(1024)
-        self.triplet_attn_3 = TripletAttention(512)
-        self.triplet_attn_2 = TripletAttention(256)
-        self.triplet_attn_1 = TripletAttention(128)
 
         self.side1 = nn.Conv2d(64,out_ch,3,padding=1)
         self.side2 = nn.Conv2d(64,out_ch,3,padding=1)
@@ -467,10 +464,12 @@ class U2NETE(nn.Module):
 
         #stage 3
         hx3 = self.stage3(hx)
+        hx3 = self.triplet_attn_3(hx3)
         hx = self.pool34(hx3)
 
         #stage 4
         hx4 = self.stage4(hx)
+        hx4 = self.triplet_attn_4(hx4)
         hx = self.pool45(hx4)
 
         #stage 5
@@ -482,25 +481,19 @@ class U2NETE(nn.Module):
         hx6up = _upsample_like(hx6,hx5)
 
         #-------------------- decoder --------------------
-        hx5d_att = self.triplet_attn_5(torch.cat((hx6up,hx5),1))
-        hx5d = self.stage5d(hx5d_att)
+        hx5d = self.stage5d(torch.cat((hx6up,hx5),1))
         hx5dup = _upsample_like(hx5d,hx4)
 
-        hx4d_att = self.triplet_attn_4(torch.cat((hx5dup,hx4),1))
-        hx4d = self.stage4d(hx4d_att)
+        hx4d = self.stage4d(torch.cat((hx5dup,hx4),1))
         hx4dup = _upsample_like(hx4d,hx3)
 
-        hx3d_att = self.triplet_attn_3(torch.cat((hx4dup,hx3),1))
-        hx3d = self.stage3d(hx3d_att)
+        hx3d = self.stage3d(torch.cat((hx4dup,hx3),1))
         hx3dup = _upsample_like(hx3d,hx2)
 
-        hx2d_att = self.triplet_attn_2(torch.cat((hx3dup,hx2),1))
-        hx2d = self.stage2d(hx2d_att)
+        hx2d = self.stage2d(torch.cat((hx3dup,hx2),1))
         hx2dup = _upsample_like(hx2d,hx1)
 
-        hx1d_att = self.triplet_attn_1(torch.cat((hx2dup,hx1),1))
-        hx1d = self.stage1d(hx1d_att)
-
+        hx1d = self.stage1d(torch.cat((hx2dup,hx1),1))
 
         #side output
         d1 = self.side1(hx1d)
