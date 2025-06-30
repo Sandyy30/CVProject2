@@ -19,18 +19,10 @@ class Sobel(nn.Module):
 
     def forward(self, img):
         x = self.filter(img)
-        x = x.pow(2).sum(dim=1, keepdim=True)
-        x = torch.sqrt(x + 1e-6)
-
-        # Strict normalization to [0,1]
-        B = x.shape[0]
-        for i in range(B):
-            min_val = x[i].min()
-            max_val = x[i].max()
-            if max_val > min_val:
-                x[i] = (x[i] - min_val) / (max_val - min_val + 1e-6)
-            else:
-                x[i] = 0.0
+        x = torch.mul(x, x)
+        x = torch.sum(x, dim=1, keepdim=True)
+        x = torch.sqrt(x)
+        
         return x
         
 
