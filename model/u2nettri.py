@@ -15,7 +15,7 @@ class Sobel(nn.Module):
                            [-1.0, -2.0, -1.0]])
         G = torch.cat([Gx.unsqueeze(0), Gy.unsqueeze(0)], 0)
         G = G.unsqueeze(1)
-        self.filter.weight = nn.Parameter(G, requires_grad=False)
+        self.filter.weight = nn.Parameter(G, requires_grad=True)
 
     def forward(self, img):
         x = self.filter(img)
