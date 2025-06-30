@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from py_sod_metrics.fmeasurev2 import (
+from evaluation.fmeasurev2 import (
     BERHandler,
     DICEHandler,
     FmeasureHandler,
@@ -15,8 +15,8 @@ from py_sod_metrics.fmeasurev2 import (
     TNRHandler,
     TPRHandler,
 )
-from py_sod_metrics.multiscale_iou import MSIoU
-from py_sod_metrics.sod_metrics import (
+from evaluation.multiscale_iou import MSIoU
+from evaluation.sod_metrics import (
     MAE,
     Emeasure,
     Fmeasure,
