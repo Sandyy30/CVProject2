@@ -22,6 +22,13 @@ class Sobel(nn.Module):
         x = torch.mul(x, x)
         x = torch.sum(x, dim=1, keepdim=True)
         x = torch.sqrt(x)
+
+        B = x.shape[0]
+        for i in range(B):
+            min_val = x[i].min()
+            max_val = x[i].max()
+            x[i] = (x[i] - min_val) / (max_val - min_val + 1e-6)
+            
         return x
 
 class REBNCONV(nn.Module):
