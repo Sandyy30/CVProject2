@@ -429,11 +429,11 @@ class U2NETE(nn.Module):
         self.rcf_encoder = RCFEncoderLite()
 
         # Simple gates for edge attention
-        self.gate1 = SimpleGate(32, 64)
-        self.gate2 = SimpleGate(64, 128)
-        self.gate3 = SimpleGate(128, 256)
-        self.gate4 = SimpleGate(256, 512)
-        self.gate5 = SimpleGate(256, 512)
+        self.gate1 = SimpleGate(64, 32)
+        self.gate2 = SimpleGate(128, 64)
+        self.gate3 = SimpleGate(256, 128)
+        self.gate4 = SimpleGate(512, 256)
+        self.gate5 = SimpleGate(512, 256)
 
         # Add fusion convs (1x1 conv for each level to fuse features)
         self.fuse1 = nn.Conv2d(64 + 32, 64, 1)   # RSU7 output (64), RCF output (32)
