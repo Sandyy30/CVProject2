@@ -76,6 +76,17 @@ class RCFEncoderLite(nn.Module):
         return features
         
 
+class SimpleGate(nn.Module):
+    def __init__(self, in_channels):
+        super().__init__()
+        self.gate = nn.Sequential(
+            nn.Conv2d(in_channels, in_channels, 1),
+            nn.Sigmoid()
+        )
+    def forward(self, x1, x2):
+        return x1 * self.gate(x2)
+        
+
 class REBNCONV(nn.Module):
     def __init__(self,in_ch=3,out_ch=3,dirate=1):
         super(REBNCONV,self).__init__()
@@ -414,6 +425,13 @@ class U2NETE(nn.Module):
         # Add RCF Encoder Lite
         self.rcf_encoder = RCFEncoderLite()
 
+        # Simple gates for edge attention
+        self.gate1 = SimpleGate(32, 64)
+        self.gate2 = SimpleGate(64, 128)
+        self.gate3 = SimpleGate(128, 256)
+        self.gate4 = SimpleGate(256, 512)
+        self.gate5 = SimpleGate(256, 512)
+
         # Add fusion convs (1x1 conv for each level to fuse features)
         self.fuse1 = nn.Conv2d(64 + 32, 64, 1)   # RSU7 output (64), RCF output (32)
         self.fuse2 = nn.Conv2d(128 + 64, 128, 1)
@@ -443,31 +461,39 @@ class U2NETE(nn.Module):
         
         ef = self.rcf_encoder(hx)
 
+        if not self.training:  # avoid slowing down training
+            import os
+            import torchvision.utils as vutils
+            os.makedirs("rcf_vis", exist_ok=True)
+
+            for i in range(5):  # ef[0] to ef[4]
+                feat = ef[i][0]  # first sample in batch, shape [C, H, W]
+                vutils.save_image(feat, f"rcf_vis/rcf_feat{i+1}.png", nrow=8, normalize=True)
 
         #stage 1
         hx1 = self.stage1(hx)
         hx = self.pool12(hx1)
-        hx1 = self.fuse1(torch.cat((hx1, ef[0]), dim=1))
+        hx1 = self.fuse1(self.gate1((hx1, ef[0]), dim=1))
 
         #stage 2
         hx2 = self.stage2(hx)
         hx = self.pool23(hx2)
-        hx2 = self.fuse2(torch.cat((hx2, ef[1]), dim=1))
+        hx2 = self.fuse2(self.gate2((hx2, ef[1]), dim=1))
 
         #stage 3
         hx3 = self.stage3(hx)
         hx = self.pool34(hx3)
-        hx3 = self.fuse3(torch.cat((hx3, ef[2]), dim=1))
+        hx3 = self.fuse3(self.gate3((hx3, ef[2]), dim=1))
 
         #stage 4
         hx4 = self.stage4(hx)
         hx = self.pool45(hx4)
-        hx4 = self.fuse4(torch.cat((hx4, ef[3]), dim=1))
+        hx4 = self.fuse4(self.gate4((hx4, ef[3]), dim=1))
 
         #stage 5
         hx5 = self.stage5(hx)
         hx = self.pool56(hx5)
-        hx5 = self.fuse5(torch.cat((hx5, ef[4]), dim=1))
+        hx5 = self.fuse5(self.gate5((hx5, ef[4]), dim=1))
 
         #stage 6
         hx6 = self.stage6(hx)
