@@ -15,16 +15,65 @@ class Sobel(nn.Module):
                            [-1.0, -2.0, -1.0]])
         G = torch.cat([Gx.unsqueeze(0), Gy.unsqueeze(0)], 0)
         G = G.unsqueeze(1)
-        self.filter.weight = nn.Parameter(G, requires_grad=True)
+        self.filter.weight = nn.Parameter(G, requires_grad=False)
 
     def forward(self, img):
         x = self.filter(img)
         x = torch.mul(x, x)
         x = torch.sum(x, dim=1, keepdim=True)
         x = torch.sqrt(x)
-        
         return x
-        
+    
+
+# class RCFEncoderLite(nn.Module):
+#     def __init__(self):
+#         super(RCFEncoderLite, self).__init__()
+#         self.act = nn.ReLU(inplace=True)
+
+#         # conv1
+#         self.conv1_1 = nn.Conv2d(3, 32, 3, padding=1)
+#         self.conv1_2 = nn.Conv2d(32, 32, 3, padding=1)
+#         self.pool1 = nn.MaxPool2d(2, stride=2, ceil_mode=True)
+
+#         # conv2
+#         self.conv2_1 = nn.Conv2d(32, 64, 3, padding=1)
+#         self.conv2_2 = nn.Conv2d(64, 64, 3, padding=1)
+#         self.pool2 = nn.MaxPool2d(2, stride=2, ceil_mode=True)
+
+#         # conv3
+#         self.conv3_1 = nn.Conv2d(64, 128, 3, padding=1)
+#         self.conv3_2 = nn.Conv2d(128, 128, 3, padding=1)
+#         self.pool3 = nn.MaxPool2d(2, stride=2, ceil_mode=True)
+
+#         # conv4
+#         self.conv4_1 = nn.Conv2d(128, 256, 3, padding=1)
+#         self.conv4_2 = nn.Conv2d(256, 256, 3, padding=1)
+#         self.pool4 = nn.MaxPool2d(2, stride=2, ceil_mode=True)
+
+#         # conv5 (dilated)
+#         self.conv5_1 = nn.Conv2d(256, 256, 3, padding=2, dilation=2)
+
+#     def forward(self, x):
+#         conv1 = self.act(self.conv1_1(x))
+#         conv1 = self.act(self.conv1_2(conv1))
+#         x = self.pool1(conv1)
+
+#         conv2 = self.act(self.conv2_1(x))
+#         conv2 = self.act(self.conv2_2(conv2))
+#         x = self.pool2(conv2)
+
+#         conv3 = self.act(self.conv3_1(x))
+#         conv3 = self.act(self.conv3_2(conv3))
+#         x = self.pool3(conv3)
+
+#         conv4 = self.act(self.conv4_1(x))
+#         conv4 = self.act(self.conv4_2(conv4))
+#         x = self.pool4(conv4)
+
+#         conv5 = self.act(self.conv5_1(x))
+
+#         return [conv1, conv2, conv3, conv4, conv5]
+    
 class RCFEncoderLite(nn.Module):
     def __init__(self, in_channels=3):
         super(RCFEncoderLite, self).__init__()
@@ -74,7 +123,17 @@ class RCFEncoderLite(nn.Module):
         features.append(x5)
 
         return features
-        
+    
+
+# class SimpleGate(nn.Module):
+#     def __init__(self, in_channels):
+#         super().__init__()
+#         self.gate = nn.Sequential(
+#             nn.Conv2d(in_channels, in_channels, 1),
+#             nn.Sigmoid()
+#         )
+#     def forward(self, x1, x2):
+#         return x1 * self.gate(x2)
 
 class SimpleGate(nn.Module):
     def __init__(self, u2net_channels, rcf_channels):
@@ -88,7 +147,7 @@ class SimpleGate(nn.Module):
         attn = self.gate(torch.cat((u2_feat, rcf_feat), dim=1))
         gated_rcf = attn * rcf_feat
         return torch.cat((u2_feat, gated_rcf), dim=1)
-        
+
 
 class REBNCONV(nn.Module):
     def __init__(self,in_ch=3,out_ch=3,dirate=1):
@@ -463,15 +522,6 @@ class U2NETE(nn.Module):
         hx = x
         
         ef = self.rcf_encoder(hx)
-
-        if not self.training:  # avoid slowing down training
-            import os
-            import torchvision.utils as vutils
-            os.makedirs("rcf_vis", exist_ok=True)
-
-            for i in range(5):  # ef[0] to ef[4]
-                feat = ef[i][0]  # first sample in batch, shape [C, H, W]
-                vutils.save_image(feat.unsqueeze(1), f"rcf_vis/rcf_feat{i+1}.png", nrow=8, normalize=True)
 
         #stage 1
         hx1 = self.stage1(hx)
