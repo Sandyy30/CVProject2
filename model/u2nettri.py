@@ -471,7 +471,7 @@ class U2NETE(nn.Module):
 
             for i in range(5):  # ef[0] to ef[4]
                 feat = ef[i][0]  # first sample in batch, shape [C, H, W]
-                vutils.save_image(feat, f"rcf_vis/rcf_feat{i+1}.png", nrow=8, normalize=True)
+                vutils.save_image(feat.unsqueeze(1), f"rcf_vis/rcf_feat{i+1}.png", nrow=8, normalize=True)
 
         #stage 1
         hx1 = self.stage1(hx)
