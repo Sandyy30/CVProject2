@@ -77,14 +77,17 @@ class RCFEncoderLite(nn.Module):
         
 
 class SimpleGate(nn.Module):
-    def __init__(self, in_channels):
-        super().__init__()
+    def __init__(self, rcf_channels, u2net_channels):
+        super(SimpleGate, self).__init__()
         self.gate = nn.Sequential(
-            nn.Conv2d(in_channels, in_channels, 1),
+            nn.Conv2d(rcf_channels, u2net_channels, kernel_size=1),
             nn.Sigmoid()
         )
-    def forward(self, x1, x2):
-        return x1 * self.gate(x2)
+
+    def forward(self, u2_feat, rcf_feat):
+        gated_rcf = self.gate(rcf_feat) * rcf_feat  # soft attention
+        fused = torch.cat((u2_feat, gated_rcf), dim=1)
+        return fused
         
 
 class REBNCONV(nn.Module):
