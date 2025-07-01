@@ -476,27 +476,27 @@ class U2NETE(nn.Module):
         #stage 1
         hx1 = self.stage1(hx)
         hx = self.pool12(hx1)
-        hx1 = self.fuse1(self.gate1((hx1, ef[0])))
+        hx1 = self.fuse1(self.gate1(hx1, ef[0]))
 
         #stage 2
         hx2 = self.stage2(hx)
         hx = self.pool23(hx2)
-        hx2 = self.fuse2(self.gate2((hx2, ef[1])))
+        hx2 = self.fuse2(self.gate2(hx2, ef[1]))
 
         #stage 3
         hx3 = self.stage3(hx)
         hx = self.pool34(hx3)
-        hx3 = self.fuse3(self.gate3((hx3, ef[2])))
+        hx3 = self.fuse3(self.gate3(hx3, ef[2]))
 
         #stage 4
         hx4 = self.stage4(hx)
         hx = self.pool45(hx4)
-        hx4 = self.fuse4(self.gate4((hx4, ef[3])))
+        hx4 = self.fuse4(self.gate4(hx4, ef[3]))
 
         #stage 5
         hx5 = self.stage5(hx)
         hx = self.pool56(hx5)
-        hx5 = self.fuse5(self.gate5((hx5, ef[4])))
+        hx5 = self.fuse5(self.gate5(hx5, ef[4]))
 
         #stage 6
         hx6 = self.stage6(hx)
