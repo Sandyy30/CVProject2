@@ -25,6 +25,56 @@ class Sobel(nn.Module):
         
         return x
         
+class RCFEncoderLite(nn.Module):
+    def __init__(self, in_channels=3):
+        super(RCFEncoderLite, self).__init__()
+
+        def conv_block(in_ch, out_ch):
+            return nn.Sequential(
+                nn.Conv2d(in_ch, out_ch, kernel_size=3, padding=1),
+                nn.ReLU(inplace=True),
+                nn.Conv2d(out_ch, out_ch, kernel_size=3, padding=1),
+                nn.ReLU(inplace=True)
+            )
+
+        self.stage1 = conv_block(in_channels, 32)
+        self.pool1 = nn.MaxPool2d(2, 2)
+
+        self.stage2 = conv_block(32, 64)
+        self.pool2 = nn.MaxPool2d(2, 2)
+
+        self.stage3 = conv_block(64, 128)
+        self.pool3 = nn.MaxPool2d(2, 2)
+
+        self.stage4 = conv_block(128, 256)
+        self.pool4 = nn.MaxPool2d(2, 2)
+
+        self.stage5 = conv_block(256, 256)
+
+    def forward(self, x):
+        features = []
+
+        x1 = self.stage1(x)   # 1/1
+        features.append(x1)
+        x = self.pool1(x1)
+
+        x2 = self.stage2(x)   # 1/2
+        features.append(x2)
+        x = self.pool2(x2)
+
+        x3 = self.stage3(x)   # 1/4
+        features.append(x3)
+        x = self.pool3(x3)
+
+        x4 = self.stage4(x)   # 1/8
+        features.append(x4)
+        x = self.pool4(x4)
+
+        x5 = self.stage5(x)   # 1/16
+        features.append(x5)
+
+        return features
+        
 
 class REBNCONV(nn.Module):
     def __init__(self,in_ch=3,out_ch=3,dirate=1):
@@ -344,8 +394,6 @@ class U2NETE(nn.Module):
     def __init__(self,in_ch=3,out_ch=1):
         super(U2NETE,self).__init__()
 
-        self.sobel = Sobel()
-
         self.stage1 = RSU7(4,32,64)
         self.pool12 = nn.MaxPool2d(2,stride=2,ceil_mode=True)
 
@@ -362,6 +410,16 @@ class U2NETE(nn.Module):
         self.pool56 = nn.MaxPool2d(2,stride=2,ceil_mode=True)
 
         self.stage6 = RSU4F(512,256,512)
+
+        # Add RCF Encoder Lite
+        self.rcf_encoder = RCFEncoderLite()
+
+        # Add fusion convs (1x1 conv for each level to fuse features)
+        self.fuse1 = nn.Conv2d(64 + 32, 64, 1)   # RSU7 output (64), RCF output (32)
+        self.fuse2 = nn.Conv2d(128 + 64, 128, 1)
+        self.fuse3 = nn.Conv2d(256 + 128, 256, 1)
+        self.fuse4 = nn.Conv2d(512 + 256, 512, 1)
+        self.fuse5 = nn.Conv2d(512 + 256, 512, 1)
 
         # decoder
         self.stage5d = RSU4F(1024,256,512)
@@ -382,35 +440,34 @@ class U2NETE(nn.Module):
     def forward(self,x):
 
         hx = x
+        
+        ef = self.rcf_encoder(hx)
 
-        # Convert RGB to grayscale
-        gray = 0.2989 * hx[:, 0:1, :, :] + 0.5870 * hx[:, 1:2, :, :] + 0.1140 * hx[:, 2:3, :, :]
-
-        # Get edge map
-        edge = self.sobel(gray)  # [B, 1, H, W]
-
-        # Concatenate RGB + edge
-        hxe = torch.cat([x, edge], dim=1)  # [B, 4, H, W]
 
         #stage 1
-        hx1 = self.stage1(hxe)
+        hx1 = self.stage1(hx)
         hx = self.pool12(hx1)
+        hx1 = self.fuse1(torch.cat((hx1, ef[0]), dim=1))
 
         #stage 2
         hx2 = self.stage2(hx)
         hx = self.pool23(hx2)
+        hx2 = self.fuse2(torch.cat((hx2, ef[1]), dim=1))
 
         #stage 3
         hx3 = self.stage3(hx)
         hx = self.pool34(hx3)
+        hx3 = self.fuse3(torch.cat((hx3, ef[2]), dim=1))
 
         #stage 4
         hx4 = self.stage4(hx)
         hx = self.pool45(hx4)
+        hx4 = self.fuse4(torch.cat((hx4, ef[3]), dim=1))
 
         #stage 5
         hx5 = self.stage5(hx)
         hx = self.pool56(hx5)
+        hx5 = self.fuse5(torch.cat((hx5, ef[4]), dim=1))
 
         #stage 6
         hx6 = self.stage6(hx)
@@ -453,6 +510,7 @@ class U2NETE(nn.Module):
         d0 = self.outconv(torch.cat((d1,d2,d3,d4,d5,d6),1))
 
         return F.sigmoid(d0), F.sigmoid(d1), F.sigmoid(d2), F.sigmoid(d3), F.sigmoid(d4), F.sigmoid(d5), F.sigmoid(d6)
+
 
 ### U^2-Net small ###
 class U2NETP(nn.Module):
