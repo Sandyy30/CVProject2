@@ -394,7 +394,7 @@ class U2NETE(nn.Module):
     def __init__(self,in_ch=3,out_ch=1):
         super(U2NETE,self).__init__()
 
-        self.stage1 = RSU7(4,32,64)
+        self.stage1 = RSU7(in_ch,32,64)
         self.pool12 = nn.MaxPool2d(2,stride=2,ceil_mode=True)
 
         self.stage2 = RSU6(64,32,128)
