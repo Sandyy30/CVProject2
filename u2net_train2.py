@@ -31,7 +31,7 @@ import csv
 
 
 class Sobel(nn.Module):
-    def __init__(self):
+    def __init__(self, normalize=True):
         super().__init__()
         self.normalize = normalize
 
@@ -199,7 +199,7 @@ train_epoch_target_losses = []
 val_epoch_losses = []
 val_epoch_target_losses = []
 
-sobel_layer = Sobel().cuda()
+sobel_layer = Sobel(normalize=True).cuda()
 
 for epoch in range(0, epoch_num):
     start_time = time.time()
