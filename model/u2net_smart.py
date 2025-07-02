@@ -105,7 +105,7 @@ class REBNCONV(nn.Module):
         self.conv_s1 = nn.Conv2d(in_ch,out_ch,3,padding=1*dirate,dilation=1*dirate)
         self.bn_s1 = nn.BatchNorm2d(out_ch)
         self.relu_s1 = nn.ReLU(inplace=True)
-        self.ta = TripletAttention()
+        self.ta = TripletAttention(out_ch)
 
     def forward(self,x):
 
@@ -436,11 +436,12 @@ class U2NETE(nn.Module):
         self.stage6 = RSU4F(512,256,512)
 
         # decoder
-        self.ta5 = TripletAttention()
-        self.ta4 = TripletAttention()
-        self.ta3 = TripletAttention()
-        self.ta2 = TripletAttention()
-        self.ta1 = TripletAttention()
+        self.ta5 = TripletAttention(1024)
+        self.ta4 = TripletAttention(1024)
+        self.ta3 = TripletAttention(512)
+        self.ta2 = TripletAttention(256)
+        self.ta1 = TripletAttention(128)
+        self.ta_out = TripletAttention(64)
 
         self.stage5d = RSU4F(1024,256,512)
         self.stage4d = RSU4(1024,128,256)
@@ -507,7 +508,7 @@ class U2NETE(nn.Module):
 
 
         #side output
-        d1 = self.side1(hx1d)
+        d1 = self.side1(self.ta_out(hx1d)) 
 
         d2 = self.side2(hx2d)
         d2 = _upsample_like(d2,d1)
