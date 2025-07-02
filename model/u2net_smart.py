@@ -3,6 +3,45 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+class Sobel(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.normalize = normalize
+
+        self.filter = nn.Conv2d(in_channels=1, out_channels=2, kernel_size=3, stride=1, padding=1, bias=False)
+
+        Gx = torch.tensor([[1.0, 0.0, -1.0], 
+                           [2.0, 0.0, -2.0], 
+                           [1.0, 0.0, -1.0]])
+        Gy = torch.tensor([[1.0, 2.0, 1.0], 
+                           [0.0, 0.0, 0.0], 
+                           [-1.0, -2.0, -1.0]])
+        G = torch.cat([Gx.unsqueeze(0), Gy.unsqueeze(0)], 0)
+        G = G.unsqueeze(1)
+        self.filter.weight = nn.Parameter(G, requires_grad=False)
+
+    def forward(self, img):
+        # Convert RGB to grayscale
+        if img.shape[1] == 3:
+            gray = 0.2989 * img[:, 0:1, :, :] + \
+                   0.5870 * img[:, 1:2, :, :] + \
+                   0.1140 * img[:, 2:3, :, :]
+        else:
+            gray = img
+
+        x = self.filter(gray)
+        x = torch.mul(x, x)
+        x = torch.sum(x, dim=1, keepdim=True)
+        x = torch.sqrt(x + 1e-6)  # avoid sqrt(0)
+
+        if self.normalize:
+            x_min = x.amin(dim=(2,3), keepdim=True)
+            x_max = x.amax(dim=(2,3), keepdim=True)
+            x = (x - x_min) / (x_max - x_min + 1e-6)
+
+        return x
+    
+
 class BasicConv(nn.Module):
     def __init__(
         self,
@@ -116,7 +155,7 @@ class REBNCONV(nn.Module):
 ## upsample tensor 'src' to have the same spatial size with tensor 'tar'
 def _upsample_like(src,tar):
 
-    src = F.interpolate(src,size=tar.shape[2:],mode='bilinear', align_corners=True)
+    src = F.upsample(src,size=tar.shape[2:],mode='bilinear')
 
     return src
 
@@ -154,8 +193,6 @@ class RSU7(nn.Module):#UNet07DRES(nn.Module):
         self.rebnconv3d = REBNCONV(mid_ch*2,mid_ch,dirate=1)
         self.rebnconv2d = REBNCONV(mid_ch*2,mid_ch,dirate=1)
         self.rebnconv1d = REBNCONV(mid_ch*2,out_ch,dirate=1)
-
-        self.ta = TripletAttention(out_ch)
 
     def forward(self,x):
 
@@ -198,9 +235,7 @@ class RSU7(nn.Module):#UNet07DRES(nn.Module):
 
         hx1d = self.rebnconv1d(torch.cat((hx2dup,hx1),1))
 
-        xout = self.ta(hx1d + hxin)
-
-        return xout
+        return hx1d + hxin
 
 ### RSU-6 ###
 class RSU6(nn.Module):#UNet06DRES(nn.Module):
@@ -231,8 +266,6 @@ class RSU6(nn.Module):#UNet06DRES(nn.Module):
         self.rebnconv3d = REBNCONV(mid_ch*2,mid_ch,dirate=1)
         self.rebnconv2d = REBNCONV(mid_ch*2,mid_ch,dirate=1)
         self.rebnconv1d = REBNCONV(mid_ch*2,out_ch,dirate=1)
-
-        self.ta = TripletAttention(out_ch)
 
     def forward(self,x):
 
@@ -271,9 +304,7 @@ class RSU6(nn.Module):#UNet06DRES(nn.Module):
 
         hx1d = self.rebnconv1d(torch.cat((hx2dup,hx1),1))
 
-        xout  = self.ta(hx1d + hxin)
-
-        return xout
+        return hx1d + hxin
 
 ### RSU-5 ###
 class RSU5(nn.Module):#UNet05DRES(nn.Module):
@@ -300,8 +331,6 @@ class RSU5(nn.Module):#UNet05DRES(nn.Module):
         self.rebnconv3d = REBNCONV(mid_ch*2,mid_ch,dirate=1)
         self.rebnconv2d = REBNCONV(mid_ch*2,mid_ch,dirate=1)
         self.rebnconv1d = REBNCONV(mid_ch*2,out_ch,dirate=1)
-
-        self.ta = TripletAttention(out_ch)
 
     def forward(self,x):
 
@@ -333,9 +362,7 @@ class RSU5(nn.Module):#UNet05DRES(nn.Module):
 
         hx1d = self.rebnconv1d(torch.cat((hx2dup,hx1),1))
 
-        xout = self.ta(hx1d + hxin)
-
-        return xout
+        return hx1d + hxin
 
 ### RSU-4 ###
 class RSU4(nn.Module):#UNet04DRES(nn.Module):
@@ -358,8 +385,6 @@ class RSU4(nn.Module):#UNet04DRES(nn.Module):
         self.rebnconv3d = REBNCONV(mid_ch*2,mid_ch,dirate=1)
         self.rebnconv2d = REBNCONV(mid_ch*2,mid_ch,dirate=1)
         self.rebnconv1d = REBNCONV(mid_ch*2,out_ch,dirate=1)
-
-        self.ta = TripletAttention(out_ch)
 
     def forward(self,x):
 
@@ -385,9 +410,7 @@ class RSU4(nn.Module):#UNet04DRES(nn.Module):
 
         hx1d = self.rebnconv1d(torch.cat((hx2dup,hx1),1))
 
-        xout = self.ta(hx1d + hxin)
-
-        return xout
+        return hx1d + hxin
 
 ### RSU-4F ###
 class RSU4F(nn.Module):#UNet04FRES(nn.Module):
@@ -429,8 +452,10 @@ class RSU4F(nn.Module):#UNet04FRES(nn.Module):
 ##### U^2-Net ####
 class U2NETE(nn.Module):
 
-    def __init__(self,in_ch=3,out_ch=1):
+    def __init__(self,in_ch=4,out_ch=1):
         super(U2NETE,self).__init__()
+
+        self.ta = TripletAttention(gate_channels=4)
 
         self.stage1 = RSU7(in_ch,32,64)
         self.pool12 = nn.MaxPool2d(2,stride=2,ceil_mode=True)
@@ -456,8 +481,6 @@ class U2NETE(nn.Module):
         self.stage2d = RSU6(256,32,64)
         self.stage1d = RSU7(128,16,64)
 
-        self.ta_out = TripletAttention(64)
-
         self.side1 = nn.Conv2d(64,out_ch,3,padding=1)
         self.side2 = nn.Conv2d(64,out_ch,3,padding=1)
         self.side3 = nn.Conv2d(128,out_ch,3,padding=1)
@@ -470,6 +493,8 @@ class U2NETE(nn.Module):
     def forward(self,x):
 
         hx = x
+
+        hx = self.ta(hx)
 
         #stage 1
         hx1 = self.stage1(hx)
@@ -512,7 +537,7 @@ class U2NETE(nn.Module):
 
 
         #side output
-        d1 = self.side1(self.ta_out(hx1d)) 
+        d1 = self.side1(hx1d)
 
         d2 = self.side2(hx2d)
         d2 = _upsample_like(d2,d1)
@@ -532,6 +557,7 @@ class U2NETE(nn.Module):
         d0 = self.outconv(torch.cat((d1,d2,d3,d4,d5,d6),1))
 
         return F.sigmoid(d0), F.sigmoid(d1), F.sigmoid(d2), F.sigmoid(d3), F.sigmoid(d4), F.sigmoid(d5), F.sigmoid(d6)
+
 
 ### U^2-Net small ###
 class U2NETP(nn.Module):
