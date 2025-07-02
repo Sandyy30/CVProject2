@@ -24,7 +24,7 @@ from data_loader import SalObjDataset
 from model import U2NET
 from model import U2NETP
 from model import U2NETE
-from model.sobel import Sobel
+from model import Sobel
 
 import time
 import matplotlib.pyplot as plt
