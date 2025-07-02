@@ -24,11 +24,50 @@ from data_loader import SalObjDataset
 from model import U2NET
 from model import U2NETP
 from model import U2NETE
-from model import Sobel
 
 import time
 import matplotlib.pyplot as plt
 import csv
+
+
+class Sobel(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.normalize = normalize
+
+        self.filter = nn.Conv2d(in_channels=1, out_channels=2, kernel_size=3, stride=1, padding=1, bias=False)
+
+        Gx = torch.tensor([[1.0, 0.0, -1.0], 
+                           [2.0, 0.0, -2.0], 
+                           [1.0, 0.0, -1.0]])
+        Gy = torch.tensor([[1.0, 2.0, 1.0], 
+                           [0.0, 0.0, 0.0], 
+                           [-1.0, -2.0, -1.0]])
+        G = torch.cat([Gx.unsqueeze(0), Gy.unsqueeze(0)], 0)
+        G = G.unsqueeze(1)
+        self.filter.weight = nn.Parameter(G, requires_grad=False)
+
+    def forward(self, img):
+        # Convert RGB to grayscale
+        if img.shape[1] == 3:
+            gray = 0.2989 * img[:, 0:1, :, :] + \
+                   0.5870 * img[:, 1:2, :, :] + \
+                   0.1140 * img[:, 2:3, :, :]
+        else:
+            gray = img
+
+        x = self.filter(gray)
+        x = torch.mul(x, x)
+        x = torch.sum(x, dim=1, keepdim=True)
+        x = torch.sqrt(x + 1e-6)  # avoid sqrt(0)
+
+        if self.normalize:
+            x_min = x.amin(dim=(2,3), keepdim=True)
+            x_max = x.amax(dim=(2,3), keepdim=True)
+            x = (x - x_min) / (x_max - x_min + 1e-6)
+
+        return x
+
 
 # ------- 1. define loss function --------
 
