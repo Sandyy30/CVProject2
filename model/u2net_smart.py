@@ -105,13 +105,11 @@ class REBNCONV(nn.Module):
         self.conv_s1 = nn.Conv2d(in_ch,out_ch,3,padding=1*dirate,dilation=1*dirate)
         self.bn_s1 = nn.BatchNorm2d(out_ch)
         self.relu_s1 = nn.ReLU(inplace=True)
-        self.ta = TripletAttention(out_ch)
 
     def forward(self,x):
 
         hx = x
         xout = self.relu_s1(self.bn_s1(self.conv_s1(hx)))
-        xout = self.ta(xout)
 
         return xout
 
@@ -157,6 +155,8 @@ class RSU7(nn.Module):#UNet07DRES(nn.Module):
         self.rebnconv2d = REBNCONV(mid_ch*2,mid_ch,dirate=1)
         self.rebnconv1d = REBNCONV(mid_ch*2,out_ch,dirate=1)
 
+        self.ta = TripletAttention(out_ch)
+
     def forward(self,x):
 
         hx = x
@@ -198,7 +198,9 @@ class RSU7(nn.Module):#UNet07DRES(nn.Module):
 
         hx1d = self.rebnconv1d(torch.cat((hx2dup,hx1),1))
 
-        return hx1d + hxin
+        xout = self.ta(hx1d + hxin)
+
+        return xout
 
 ### RSU-6 ###
 class RSU6(nn.Module):#UNet06DRES(nn.Module):
@@ -229,6 +231,8 @@ class RSU6(nn.Module):#UNet06DRES(nn.Module):
         self.rebnconv3d = REBNCONV(mid_ch*2,mid_ch,dirate=1)
         self.rebnconv2d = REBNCONV(mid_ch*2,mid_ch,dirate=1)
         self.rebnconv1d = REBNCONV(mid_ch*2,out_ch,dirate=1)
+
+        self.ta = TripletAttention(out_ch)
 
     def forward(self,x):
 
@@ -267,7 +271,9 @@ class RSU6(nn.Module):#UNet06DRES(nn.Module):
 
         hx1d = self.rebnconv1d(torch.cat((hx2dup,hx1),1))
 
-        return hx1d + hxin
+        xout  = self.ta(hx1d + hxin)
+
+        return xout
 
 ### RSU-5 ###
 class RSU5(nn.Module):#UNet05DRES(nn.Module):
@@ -294,6 +300,8 @@ class RSU5(nn.Module):#UNet05DRES(nn.Module):
         self.rebnconv3d = REBNCONV(mid_ch*2,mid_ch,dirate=1)
         self.rebnconv2d = REBNCONV(mid_ch*2,mid_ch,dirate=1)
         self.rebnconv1d = REBNCONV(mid_ch*2,out_ch,dirate=1)
+
+        self.ta = TripletAttention(out_ch)
 
     def forward(self,x):
 
@@ -325,7 +333,9 @@ class RSU5(nn.Module):#UNet05DRES(nn.Module):
 
         hx1d = self.rebnconv1d(torch.cat((hx2dup,hx1),1))
 
-        return hx1d + hxin
+        xout = self.ta(hx1d + hxin)
+
+        return xout
 
 ### RSU-4 ###
 class RSU4(nn.Module):#UNet04DRES(nn.Module):
@@ -348,6 +358,8 @@ class RSU4(nn.Module):#UNet04DRES(nn.Module):
         self.rebnconv3d = REBNCONV(mid_ch*2,mid_ch,dirate=1)
         self.rebnconv2d = REBNCONV(mid_ch*2,mid_ch,dirate=1)
         self.rebnconv1d = REBNCONV(mid_ch*2,out_ch,dirate=1)
+
+        self.ta = TripletAttention(out_ch)
 
     def forward(self,x):
 
@@ -373,7 +385,9 @@ class RSU4(nn.Module):#UNet04DRES(nn.Module):
 
         hx1d = self.rebnconv1d(torch.cat((hx2dup,hx1),1))
 
-        return hx1d + hxin
+        xout = self.ta(hx1d + hxin)
+
+        return xout
 
 ### RSU-4F ###
 class RSU4F(nn.Module):#UNet04FRES(nn.Module):
@@ -436,18 +450,13 @@ class U2NETE(nn.Module):
         self.stage6 = RSU4F(512,256,512)
 
         # decoder
-        self.ta5 = TripletAttention(1024)
-        self.ta4 = TripletAttention(1024)
-        self.ta3 = TripletAttention(512)
-        self.ta2 = TripletAttention(256)
-        self.ta1 = TripletAttention(128)
-        self.ta_out = TripletAttention(64)
-
         self.stage5d = RSU4F(1024,256,512)
         self.stage4d = RSU4(1024,128,256)
         self.stage3d = RSU5(512,64,128)
         self.stage2d = RSU6(256,32,64)
         self.stage1d = RSU7(128,16,64)
+
+        self.ta_out = TripletAttention(64)
 
         self.side1 = nn.Conv2d(64,out_ch,3,padding=1)
         self.side2 = nn.Conv2d(64,out_ch,3,padding=1)
@@ -487,24 +496,19 @@ class U2NETE(nn.Module):
         hx6up = _upsample_like(hx6,hx5)
 
         #-------------------- decoder --------------------
-        fuse5 = self.ta5(torch.cat((hx6up,hx5),1))
-        hx5d = self.stage5d(fuse5)
+        hx5d = self.stage5d(torch.cat((hx6up,hx5),1))
         hx5dup = _upsample_like(hx5d,hx4)
 
-        fuse4 = self.ta4(torch.cat((hx5dup,hx4),1))
-        hx4d = self.stage4d(fuse4)
+        hx4d = self.stage4d(torch.cat((hx5dup,hx4),1))
         hx4dup = _upsample_like(hx4d,hx3)
 
-        fuse3 = self.ta3(torch.cat((hx4dup,hx3),1))
-        hx3d = self.stage3d(fuse3)
+        hx3d = self.stage3d(torch.cat((hx4dup,hx3),1))
         hx3dup = _upsample_like(hx3d,hx2)
 
-        fuse2 = self.ta2(torch.cat((hx3dup,hx2),1))
-        hx2d = self.stage2d(fuse2)
+        hx2d = self.stage2d(torch.cat((hx3dup,hx2),1))
         hx2dup = _upsample_like(hx2d,hx1)
 
-        fuse1 = self.ta1(torch.cat((hx2dup,hx1),1))
-        hx1d = self.stage1d(fuse1)
+        hx1d = self.stage1d(torch.cat((hx2dup,hx1),1))
 
 
         #side output
