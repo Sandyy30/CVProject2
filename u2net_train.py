@@ -51,7 +51,7 @@ def muti_bce_loss_fusion(d0, d1, d2, d3, d4, d5, d6, labels_v):
 
 # ------- 2. set the directory of training dataset --------
 
-model_name = 'u2nete' # ‘u2net' 'u2netp'
+model_name = 'u2net' # ‘u2net' 'u2netp'
 print("Model: ", model_name)
 
 tra_data_dir = os.path.join(os.getcwd(), 'train1000' + os.sep)
