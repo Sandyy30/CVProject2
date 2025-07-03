@@ -177,7 +177,7 @@ if(model_name=='u2net'):
 elif(model_name=='u2netp'):
     net = U2NETP(3,1)
 elif(model_name=="u2nete"):
-    net = U2NETE(3,1)
+    net = U2NETE(4,1)
 
 if torch.cuda.is_available():
     net.cuda()
