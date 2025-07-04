@@ -22,6 +22,14 @@ from model import U2NET # full size version 173.6 MB
 from model import U2NETP # small version u2net 4.7 MB
 from model import U2NETE
 
+
+# --------- argparse for command-line argument ---------
+parser = argparse.ArgumentParser()
+parser.add_argument("model", type=str, choices=["u2net", "u2netp", "u2nete"], help="Model type: u2net | u2netp | u2nete")
+args = parser.parse_args()
+model_name = args.model
+
+
 # normalize the predicted SOD probability map
 def normPRED(d):
     ma = torch.max(d)
@@ -56,7 +64,7 @@ def save_output(image_name,pred,d_dir):
 def main():
 
     # --------- 1. get image path and name ---------
-    model_name='u2net' # u2net u2netp
+    # model_name='u2net' # u2net u2netp
 
 
 
