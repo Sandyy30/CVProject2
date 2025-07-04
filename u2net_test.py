@@ -56,7 +56,7 @@ def save_output(image_name,pred,d_dir):
 def main():
 
     # --------- 1. get image path and name ---------
-    model_name='u2nete' # u2net u2netp
+    model_name='u2net' # u2net u2netp
 
 
 
