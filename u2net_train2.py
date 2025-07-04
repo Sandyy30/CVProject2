@@ -260,15 +260,20 @@ for epoch in range(0, epoch_num):
             inputs, labels = data['image'], data['label']
             inputs = inputs.type(torch.FloatTensor)
             labels = labels.type(torch.FloatTensor)
-	
+
             if torch.cuda.is_available():
                 inputs_v, labels_v = inputs.cuda(), labels.cuda()
             else:
                 inputs_v, labels_v = inputs, labels
-    
+
+            # ✅ Generate edge map and 4-channel input
+            edge = sobel_layer(inputs_v)
+            input_4ch = torch.cat([inputs_v, edge], dim=1)
+
+            # ✅ Use correct input
             d0, d1, d2, d3, d4, d5, d6 = net(input_4ch)
             val_loss2, val_loss = muti_bce_loss_fusion(d0, d1, d2, d3, d4, d5, d6, labels_v)
-	
+
             val_running_loss += val_loss.data.item()
             val_running_tar_loss += val_loss2.data.item()
 
