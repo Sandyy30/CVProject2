@@ -455,9 +455,16 @@ class U2NETE(nn.Module):
     def __init__(self,in_ch=4,out_ch=1):
         super(U2NETE,self).__init__()
 
-        self.ta = TripletAttention(gate_channels=4)
+        # Edge encoder
+        self.edge_stage1 = RSU7(1, 32, 64)
+        self.edge_pool12 = nn.MaxPool2d(2, stride=2, ceil_mode=True)
+        self.edge_stage2 = RSU6(64, 32, 128)
 
-        self.stage1 = RSU7(in_ch,32,64)
+        # Optional: Triplet Attention for fusion
+        self.ta = TripletAttention(gate_channels=256)  # 128 + 128
+        self.fuse_conv = nn.Conv2d(256, 128, kernel_size=1)
+
+        self.stage1 = RSU7(3,32,64)
         self.pool12 = nn.MaxPool2d(2,stride=2,ceil_mode=True)
 
         self.stage2 = RSU6(64,32,128)
@@ -491,10 +498,16 @@ class U2NETE(nn.Module):
         self.outconv = nn.Conv2d(6*out_ch,out_ch,1)
 
     def forward(self,x):
+        
+        rgb = x[:, :3, :, :]   # [B, 3, H, W]
+        edge = x[:, 3:, :, :]  # [B, 1, H, W]
 
-        hx = x
+        hx = rgb
 
-        hx = self.ta(hx)
+        # Edge
+        ex1 = self.edge_stage1(edge)
+        ex = self.edge_pool12(ex1)
+        ex2 = self.edge_stage2(ex)
 
         #stage 1
         hx1 = self.stage1(hx)
@@ -502,6 +515,11 @@ class U2NETE(nn.Module):
 
         #stage 2
         hx2 = self.stage2(hx)
+
+        fused = torch.cat((hx2, ex2), dim=1)  # [B, 256, H, W]
+        fused = self.ta(fused)
+        hx2 = self.fuse_conv(fused)  # Reduce back to 128   
+
         hx = self.pool23(hx2)
 
         #stage 3
