@@ -28,6 +28,13 @@ from model import U2NETE
 import time
 import matplotlib.pyplot as plt
 import csv
+import argparse
+
+# --------- argparse for command-line argument ---------
+parser = argparse.ArgumentParser()
+parser.add_argument("--model", type=str, default="u2net", choices=["u2net", "u2netp", "u2nete"], help="Model type: u2net | u2netp | u2nete")
+args = parser.parse_args()
+model_name = args.model
 
 # ------- 1. define loss function --------
 
