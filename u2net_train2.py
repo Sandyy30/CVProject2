@@ -266,7 +266,7 @@ for epoch in range(0, epoch_num):
             else:
                 inputs_v, labels_v = inputs, labels
     
-            d0, d1, d2, d3, d4, d5, d6 = net(inputs_v)
+            d0, d1, d2, d3, d4, d5, d6 = net(input_4ch)
             val_loss2, val_loss = muti_bce_loss_fusion(d0, d1, d2, d3, d4, d5, d6, labels_v)
 	
             val_running_loss += val_loss.data.item()
